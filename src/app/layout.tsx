@@ -1,10 +1,8 @@
 import '@/styles/globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { twMerge } from 'tailwind-merge'
 
 import { Providers } from './providers'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -17,14 +15,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='ja'>
+    <html lang='ja' suppressHydrationWarning>
       <head>
         <link rel='manifest' href='/manifest.json' />
         <link rel='apple-touch-icon' href='/icon.png'></link>
         <meta name='theme-color' content='#f69435' />
       </head>
-      <body className={inter.className}>
-        <Providers>{children}</Providers>
+      <body className={twMerge('font-noto min-h-screen bg-background antialiased')}>
+        <Providers>
+          <div className='relative flex h-screen flex-col'>{children}</div>
+        </Providers>
       </body>
     </html>
   )
