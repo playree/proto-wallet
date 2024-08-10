@@ -18,6 +18,7 @@
         "caughtErrorsIgnorePattern": "^_",
         "destructuredArrayIgnorePattern": "^_"
       }
-    ]
+    ],
+    "import/no-unresolved": "off"
   }
 }
