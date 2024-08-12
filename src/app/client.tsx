@@ -1,6 +1,7 @@
 'use client'
 
 import { ExButton } from '@/components/nextekit/ui/button'
+import { PwaCryptoStorage } from '@/components/pwacs'
 import base64url from 'base64url'
 import { decode as cborDecode } from 'cbor-x'
 import { FC } from 'react'
@@ -81,6 +82,20 @@ export const RegisterClient: FC = () => {
 
     const publicKeyJwk = coseToJwk(authData.credentialPublicKey)
     console.log('publicKeyJwk', publicKeyJwk)
+  }
+
+  return <ExButton onPress={register}>test</ExButton>
+}
+
+export const RegisterClient2: FC = () => {
+  const register = async () => {
+    const res = await PwaCryptoStorage.setup({
+      appName: 'ProtoWallet',
+      appHost: 'localhost',
+      userName: 'test@user.dev',
+      userDisplayName: 'TestUser',
+    })
+    console.log('res:', res)
   }
 
   return <ExButton onPress={register}>test</ExButton>
