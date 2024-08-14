@@ -1,5 +1,6 @@
 import base64url from 'base64url'
 
+import { AesGcm } from './aes'
 import { cbor } from './cbor'
 
 export type RegistInfo = {
@@ -40,9 +41,11 @@ const coseToJwk = (cose: Uint8Array) => {
 
 export const registWA = async ({ appName, appHost, userName, userDisplayName }: RegistInfo) => {
   const textDec = new TextDecoder()
-  const textEnc = new TextEncoder()
 
-  const keyid = crypto.getRandomValues(new Uint8Array(32))
+  const key = await AesGcm.deriveKey()
+  const keyid = Buffer.concat([key.key, key.salt])
+  console.debug('keyid:', keyid)
+
   const challenge = crypto.getRandomValues(new Uint8Array(32))
   console.debug('challenge:', base64url(Buffer.from(challenge)))
 
