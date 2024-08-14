@@ -6472,6 +6472,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dexie@npm:^4.0.8":
+  version: 4.0.8
+  resolution: "dexie@npm:4.0.8"
+  checksum: 10c0/d35a817d986c334a2de5f1a0d5ef373b3d9464de7b520f9af50c00ea2f974386632a3f949add83ba1fce9e929908d96db19726377f641f4768c137a554969a2d
+  languageName: node
+  linkType: hard
+
 "didyoumean@npm:^1.2.2":
   version: 1.2.2
   resolution: "didyoumean@npm:1.2.2"
@@ -9458,6 +9465,7 @@ __metadata:
     "@typescript-eslint/parser": "npm:^8.0.1"
     base64url: "npm:^3.0.1"
     cbor-x: "npm:^1.6.0"
+    dexie: "npm:^4.0.8"
     eslint: "npm:^8"
     eslint-config-next: "npm:14.2.5"
     eslint-config-prettier: "npm:^9.1.0"

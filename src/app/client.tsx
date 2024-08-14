@@ -1,7 +1,7 @@
 'use client'
 
 import { ExButton } from '@/components/nextekit/ui/button'
-import { PwaCryptoStorage } from '@/components/pwacs'
+import { PwaCryptoStorage } from '@/utils/pwacs'
 import base64url from 'base64url'
 import { decode as cborDecode } from 'cbor-x'
 import { FC } from 'react'
