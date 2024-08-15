@@ -43,7 +43,7 @@ export const registWA = async ({ appName, appHost, userName, userDisplayName }: 
   const textDec = new TextDecoder()
 
   const key = await AesGcm.deriveKey()
-  const keyid = Buffer.concat([key.key, key.salt])
+  const keyid = Buffer.concat([key.key, key.salt]) as Uint8Array
   console.debug('keyid:', keyid)
 
   const challenge = crypto.getRandomValues(new Uint8Array(32))
@@ -120,4 +120,9 @@ export const registWA = async ({ appName, appHost, userName, userDisplayName }: 
   // 公開鍵取得
   const publicKeyJwk = coseToJwk(authDataObj.credentialPublicKey)
   console.debug('publicKeyJwk:', publicKeyJwk)
+
+  return {
+    keyid,
+    publicKeyJwk,
+  }
 }
