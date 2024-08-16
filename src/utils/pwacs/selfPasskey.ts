@@ -60,7 +60,7 @@ const coseToJwk = (cose: Uint8Array): JsonWebKey => {
   throw new Error('Unknown public key algorithm')
 }
 
-export const registWA = async ({
+export const registPasskey = async ({
   appName,
   appHost,
   userName,
@@ -157,7 +157,7 @@ export const registWA = async ({
   }
 }
 
-export const authWA = async ({ id, publicKeyJwk }: AuthRequest): Promise<AuthResponse> => {
+export const authPasskey = async ({ id, publicKeyJwk }: AuthRequest): Promise<AuthResponse> => {
   const challenge = crypto.getRandomValues(new Uint8Array(32))
   console.debug('challenge:', base64url(Buffer.from(challenge)))
 

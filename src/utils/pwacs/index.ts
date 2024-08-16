@@ -1,6 +1,6 @@
 import { AesGcm } from './aes'
 import { cbor } from './cbor'
-import { RegistRequest, authWA, registWA } from './selfWebAuthn'
+import { RegistRequest, authPasskey, registPasskey } from './selfPasskey'
 
 export type PwacsConfig = {
   cryptVerify: Uint8Array
@@ -20,7 +20,7 @@ export class PwaCryptoStorage {
   }
 
   static async setup(info: RegistRequest) {
-    const { crypt, webAuthn } = await registWA(info)
+    const { crypt, webAuthn } = await registPasskey(info)
     const keys = await AesGcm.deriveKey(crypt.key, crypt.salt)
     const cryptVerify = await AesGcm.encryptString(keys.cryptoKey, VERIFY_STRING)
     console.debug('setup:', cryptVerify, webAuthn)
@@ -39,7 +39,7 @@ export class PwaCryptoStorage {
   static async unlock(configData: Uint8Array) {
     const config = cbor.decode<PwacsConfig>(configData)
     console.debug('unlock:', config)
-    const crypt = await authWA(config.webAuthn)
+    const crypt = await authPasskey(config.webAuthn)
     const keys = await AesGcm.deriveKey(crypt.key, crypt.salt)
     console.debug(keys)
     const res = await AesGcm.decryptString(keys.cryptoKey, config.cryptVerify)
