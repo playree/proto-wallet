@@ -52,6 +52,7 @@ export class AesGcm {
   static async decrypt(key: CryptoKey, data: ArrayBuffer) {
     const iv = data.slice(0, 16)
     const target = data.slice(16)
+    console.debug('decrypt:', iv, target)
 
     const dec = await crypto.subtle.decrypt(
       {
@@ -62,6 +63,7 @@ export class AesGcm {
       key,
       target,
     )
+    console.debug('decrypt:', dec)
     return dec
   }
 

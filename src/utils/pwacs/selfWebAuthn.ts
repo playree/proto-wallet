@@ -69,12 +69,9 @@ export const registWA = async ({
   const textDec = new TextDecoder()
 
   const keys = await AesGcm.deriveKey()
-  console.debug('keys:', keys)
   const keyid = Buffer.concat([keys.key, keys.salt])
 
   const challenge = crypto.getRandomValues(new Uint8Array(32))
-  console.debug('challenge:', base64url(Buffer.from(challenge)))
-
   const credential = (await navigator.credentials.create({
     publicKey: {
       challenge,
@@ -93,6 +90,7 @@ export const registWA = async ({
       ],
     },
   })) as PublicKeyCredential
+  console.debug('credential:', credential)
 
   // レスポンスを解析
   const authAttRes = credential.response as AuthenticatorAttestationResponse
@@ -176,12 +174,12 @@ export const authWA = async ({ id, publicKeyJwk }: AuthRequest): Promise<AuthRes
     },
   })) as PublicKeyCredential
 
-  const authAttRes = credential.response as AuthenticatorAssertionResponse
+  const { userHandle } = credential.response as AuthenticatorAssertionResponse
+  if (!userHandle) {
+    throw new Error('Invalid userHandle')
+  }
 
-  const keys = await AesGcm.deriveKey(
-    new Uint8Array(credential.rawId.slice(0, 16)),
-    new Uint8Array(credential.rawId.slice(16)),
-  )
+  const keys = await AesGcm.deriveKey(new Uint8Array(userHandle.slice(0, 32)), new Uint8Array(userHandle.slice(32)))
   console.debug('keys:', keys)
 
   return {
