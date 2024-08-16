@@ -10,9 +10,14 @@ export type RegistInfo = {
   userDisplayName: string
 }
 
+export type RegistResponse = {
+  keyid: Uint8Array
+  publicKeyJwk: JsonWebKey
+}
+
 const newDataView = (array: Uint8Array) => new DataView(array.buffer, array.byteOffset, array.byteLength)
 
-const coseToJwk = (cose: Uint8Array) => {
+const coseToJwk = (cose: Uint8Array): JsonWebKey => {
   const coseObj = cbor.decode<{
     '1': number
     '3': number
@@ -39,12 +44,17 @@ const coseToJwk = (cose: Uint8Array) => {
   throw new Error('Unknown public key algorithm')
 }
 
-export const registWA = async ({ appName, appHost, userName, userDisplayName }: RegistInfo) => {
+export const registWA = async ({
+  appName,
+  appHost,
+  userName,
+  userDisplayName,
+}: RegistInfo): Promise<RegistResponse> => {
   const textDec = new TextDecoder()
 
   const key = await AesGcm.deriveKey()
-  const keyid = Buffer.concat([key.key, key.salt]) as Uint8Array
-  console.debug('keyid:', keyid)
+  console.debug('key:', key)
+  const keyid = Buffer.concat([key.key, key.salt])
 
   const challenge = crypto.getRandomValues(new Uint8Array(32))
   console.debug('challenge:', base64url(Buffer.from(challenge)))

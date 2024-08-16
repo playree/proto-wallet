@@ -26,7 +26,7 @@ export const AuthClient: FC = () => {
   const auth = async () => {
     const pwacsConfig = await idxDb.getPwacsConfig()
     if (pwacsConfig) {
-      await PwaCryptoStorage.restore(pwacsConfig)
+      PwaCryptoStorage.restore(pwacsConfig)
     }
     // const dec = new TextDecoder()
     // const enc = new TextEncoder()
