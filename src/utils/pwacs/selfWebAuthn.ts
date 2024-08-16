@@ -3,7 +3,7 @@ import base64url from 'base64url'
 import { AesGcm } from './aes'
 import { cbor } from './cbor'
 
-export type RegistInfo = {
+export type RegistRequest = {
   appName: string
   appHost: string
   userName: string
@@ -11,8 +11,24 @@ export type RegistInfo = {
 }
 
 export type RegistResponse = {
-  keyid: Uint8Array
+  crypt: {
+    key: Uint8Array
+    salt: Uint8Array
+  }
+  webAuthn: {
+    id: Uint8Array
+    publicKeyJwk: JsonWebKey
+  }
+}
+
+export type AuthRequest = {
+  id: Uint8Array
   publicKeyJwk: JsonWebKey
+}
+
+export type AuthResponse = {
+  key: Uint8Array
+  salt: Uint8Array
 }
 
 const newDataView = (array: Uint8Array) => new DataView(array.buffer, array.byteOffset, array.byteLength)
@@ -49,17 +65,17 @@ export const registWA = async ({
   appHost,
   userName,
   userDisplayName,
-}: RegistInfo): Promise<RegistResponse> => {
+}: RegistRequest): Promise<RegistResponse> => {
   const textDec = new TextDecoder()
 
-  const key = await AesGcm.deriveKey()
-  console.debug('key:', key)
-  const keyid = Buffer.concat([key.key, key.salt])
+  const keys = await AesGcm.deriveKey()
+  console.debug('keys:', keys)
+  const keyid = Buffer.concat([keys.key, keys.salt])
 
   const challenge = crypto.getRandomValues(new Uint8Array(32))
   console.debug('challenge:', base64url(Buffer.from(challenge)))
 
-  const credential = await navigator.credentials.create({
+  const credential = (await navigator.credentials.create({
     publicKey: {
       challenge,
       rp: {
@@ -76,10 +92,10 @@ export const registWA = async ({
         { alg: -257, type: 'public-key' },
       ],
     },
-  })
+  })) as PublicKeyCredential
 
   // レスポンスを解析
-  const authAttRes = (credential as PublicKeyCredential).response as AuthenticatorAttestationResponse
+  const authAttRes = credential.response as AuthenticatorAttestationResponse
   const clientDataJSON: {
     challenge: string
     crossOrigin: boolean
@@ -132,7 +148,44 @@ export const registWA = async ({
   console.debug('publicKeyJwk:', publicKeyJwk)
 
   return {
-    keyid,
-    publicKeyJwk,
+    crypt: {
+      key: keys.key,
+      salt: keys.salt,
+    },
+    webAuthn: {
+      id: new Uint8Array(credential.rawId),
+      publicKeyJwk,
+    },
+  }
+}
+
+export const authWA = async ({ id, publicKeyJwk }: AuthRequest): Promise<AuthResponse> => {
+  const challenge = crypto.getRandomValues(new Uint8Array(32))
+  console.debug('challenge:', base64url(Buffer.from(challenge)))
+
+  const credential = (await navigator.credentials.get({
+    publicKey: {
+      challenge,
+      allowCredentials: [
+        {
+          transports: ['internal'],
+          type: 'public-key',
+          id,
+        },
+      ],
+    },
+  })) as PublicKeyCredential
+
+  const authAttRes = credential.response as AuthenticatorAssertionResponse
+
+  const keys = await AesGcm.deriveKey(
+    new Uint8Array(credential.rawId.slice(0, 16)),
+    new Uint8Array(credential.rawId.slice(16)),
+  )
+  console.debug('keys:', keys)
+
+  return {
+    key: keys.key,
+    salt: keys.salt,
   }
 }

@@ -3,7 +3,6 @@
 import { ExButton } from '@/components/nextekit/ui/button'
 import { idxDb } from '@/utils/indexedDB'
 import { PwaCryptoStorage } from '@/utils/pwacs'
-import base64url from 'base64url'
 import { FC } from 'react'
 
 export const RegisterClient: FC = () => {
@@ -26,7 +25,7 @@ export const AuthClient: FC = () => {
   const auth = async () => {
     const pwacsConfig = await idxDb.getPwacsConfig()
     if (pwacsConfig) {
-      PwaCryptoStorage.restore(pwacsConfig)
+      await PwaCryptoStorage.unlock(pwacsConfig)
     }
     // const dec = new TextDecoder()
     // const enc = new TextEncoder()

@@ -1,27 +1,39 @@
+import { AesGcm } from './aes'
 import { cbor } from './cbor'
-import { RegistInfo, RegistResponse, registWA } from './selfWebAuthn'
+import { RegistRequest, authWA, registWA } from './selfWebAuthn'
 
 export type PwacsConfig = {
-  cryptoVerify: Uint8Array
-  publicKeyJwk: JsonWebKey
+  cryptVerify: Uint8Array
+  webAuthn: {
+    id: Uint8Array
+    publicKeyJwk: JsonWebKey
+  }
 }
 
+const VERIFY_STRING = 'PWACS Verify'
+
 export class PwaCryptoStorage {
-  private salt: Uint8Array
-  private publicKeyJwk: JsonWebKey
+  private key: CryptoKey
 
-  constructor({ keyid, publicKeyJwk }: RegistResponse) {
-    this.salt = salt
-    this.publicKeyJwk = publicKeyJwk
+  constructor(key: CryptoKey) {
+    this.key = key
   }
 
-  static async setup(info: RegistInfo) {
-    const regInfo = await registWA(info)
-    return cbor.encode(regInfo)
+  static async setup(info: RegistRequest) {
+    const { crypt, webAuthn } = await registWA(info)
+    const keys = await AesGcm.deriveKey(crypt.key, crypt.salt)
+    const cryptVerify = await AesGcm.encryptString(keys.cryptoKey, VERIFY_STRING)
+    console.debug('setup:', cryptVerify, webAuthn)
+
+    return cbor.encode<PwacsConfig>({
+      cryptVerify,
+      webAuthn,
+    })
   }
 
-  static restore(configData: Uint8Array) {
-    const config = cbor.decode<RegistResponse>(configData)
-    return new PwaCryptoStorage(config)
+  static async unlock(configData: Uint8Array) {
+    const config = cbor.decode<PwacsConfig>(configData)
+    console.debug('unlock:', config)
+    await authWA(config.webAuthn)
   }
 }
