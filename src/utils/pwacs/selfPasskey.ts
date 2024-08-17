@@ -87,6 +87,28 @@ const importKey = async (publicKeyJwk: JsonWebKey) => {
   return { publicKey, verifyAlg }
 }
 
+const asn1ToP1363 = (asn1: ArrayBuffer) => {
+  const input = new DataView(asn1)
+
+  const c1buff = asn1.slice(4, 4 + input.getInt8(3))
+  const c1view = new Uint8Array(c1buff)
+
+  const c2buff = asn1.slice(6 + c1buff.byteLength)
+  const c2view = new Uint8Array(c2buff)
+
+  let c1offset = 0
+  while (c1view[c1offset] === 0) {
+    c1offset++
+  }
+
+  let c2offset = 0
+  while (c2view[c2offset] === 0) {
+    c2offset++
+  }
+
+  return Buffer.concat([new Uint8Array(c1buff, c1offset), new Uint8Array(c2buff, c2offset)])
+}
+
 export const registPasskey = async ({
   appName,
   appHost,
@@ -112,7 +134,7 @@ export const registPasskey = async ({
         displayName: userDisplayName,
       },
       pubKeyCredParams: [
-        // { alg: -7, type: 'public-key' },
+        { alg: -7, type: 'public-key' },
         { alg: -257, type: 'public-key' },
       ],
     },
@@ -235,7 +257,7 @@ export const authPasskey = async ({ appHost, webAuthn }: AuthRequest): Promise<A
   const key = await importKey(webAuthn.publicKeyJwk)
   console.debug('key:', key)
 
-  const ok = await crypto.subtle.verify(key.verifyAlg, key.publicKey, authAttRes.signature, verifyData)
+  const ok = await crypto.subtle.verify(key.verifyAlg, key.publicKey, asn1ToP1363(authAttRes.signature), verifyData)
   console.debug('ok:', ok)
 
   // userHandleから暗号鍵情報抽出
