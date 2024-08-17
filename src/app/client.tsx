@@ -27,27 +27,6 @@ export const AuthClient: FC = () => {
     if (pwacsConfig) {
       await PwaCryptStorage.unlock(pwacsConfig)
     }
-    // const dec = new TextDecoder()
-    // const enc = new TextEncoder()
-
-    // const credential = await navigator.credentials.get({
-    //   publicKey: {
-    //     challenge: enc.encode('challengexxx').buffer,
-    //     allowCredentials: [
-    //       {
-    //         transports: ['internal'],
-    //         type: 'public-key',
-    //         id: base64url.toBuffer('NMxfzDqyz-Zo_DDdAUVY8Mb8qqJmhgNb6aJL8BaR0Qw').buffer,
-    //       },
-    //     ],
-    //   },
-    // })
-    // const authAttRes = (credential as PublicKeyCredential).response as AuthenticatorAssertionResponse
-    // console.log('credential:', credential)
-    // console.log('signature:', base64url.encode(Buffer.from(authAttRes.signature)))
-    // if (authAttRes.userHandle) {
-    //   console.log('userHandle:', dec.decode(authAttRes.userHandle))
-    // }
   }
 
   return <ExButton onPress={auth}>test2</ExButton>
