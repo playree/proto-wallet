@@ -52,12 +52,15 @@ const coseToJwk = (cose: Uint8Array): JsonWebKey => {
       crv: 'P-256',
       x: base64url(coseObj[-2]),
       y: base64url(coseObj[-3]),
+      ext: true,
     }
   } else if (coseObj[3] === -257) {
     return {
       kty: 'RSA',
       n: base64url(coseObj[-1]),
       e: base64url(coseObj[-2]),
+      alg: 'RS256',
+      ext: true,
     }
   }
   throw new Error('Unknown public key algorithm')
@@ -88,7 +91,7 @@ export const registPasskey = async ({
         displayName: userDisplayName,
       },
       pubKeyCredParams: [
-        { alg: -7, type: 'public-key' },
+        // { alg: -7, type: 'public-key' },
         { alg: -257, type: 'public-key' },
       ],
     },
@@ -180,7 +183,9 @@ export const authPasskey = async ({ appHost, webAuthn }: AuthRequest): Promise<A
   })) as PublicKeyCredential
 
   // レスポンスを解析
-  const authAttRes = credential.response as AuthenticatorAttestationResponse
+  const authAttRes = credential.response as AuthenticatorAssertionResponse
+  console.debug('authAttRes:', authAttRes)
+
   const clientDataJSON: {
     challenge: string
     crossOrigin: boolean
@@ -201,12 +206,44 @@ export const authPasskey = async ({ appHost, webAuthn }: AuthRequest): Promise<A
     throw new Error('Invalid origin')
   }
 
-  const { userHandle } = credential.response as AuthenticatorAssertionResponse
-  if (!userHandle) {
+  // signature検証
+  const clientDataJSONHash = await crypto.subtle.digest('SHA-256', authAttRes.clientDataJSON)
+  const verifyData = Buffer.concat([new Uint8Array(authAttRes.authenticatorData), new Uint8Array(clientDataJSONHash)])
+  console.debug('verifyData:', verifyData)
+
+  // const publicKey = await crypto.subtle.importKey(
+  //   'jwk',
+  //   webAuthn.publicKeyJwk,
+  //   { name: 'ECDSA', namedCurve: 'P-256' },
+  //   false,
+  //   ['verify'],
+  // )
+  const publicKey = await crypto.subtle.importKey(
+    'jwk',
+    webAuthn.publicKeyJwk,
+    { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } },
+    false,
+    ['verify'],
+  )
+  console.debug('publicKey:', publicKey)
+
+  // const ok = await crypto.subtle.verify(
+  //   { name: 'ECDSA', hash: { name: 'SHA-256' } },
+  //   publicKey,
+  //   authAttRes.signature,
+  //   verifyData,
+  // )
+  const ok = await crypto.subtle.verify({ name: 'RSASSA-PKCS1-v1_5' }, publicKey, authAttRes.signature, verifyData)
+  console.debug('ok:', ok)
+
+  // userHandleから暗号鍵情報抽出
+  if (!authAttRes.userHandle) {
     throw new Error('Invalid userHandle')
   }
-
-  const keys = await AesGcm.deriveKey(new Uint8Array(userHandle.slice(0, 32)), new Uint8Array(userHandle.slice(32)))
+  const keys = await AesGcm.deriveKey(
+    new Uint8Array(authAttRes.userHandle.slice(0, 32)),
+    new Uint8Array(authAttRes.userHandle.slice(32)),
+  )
   console.debug('keys:', keys)
 
   return {
