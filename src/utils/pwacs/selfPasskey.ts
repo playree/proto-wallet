@@ -22,8 +22,11 @@ export type RegistResponse = {
 }
 
 export type AuthRequest = {
-  id: Uint8Array
-  publicKeyJwk: JsonWebKey
+  appHost: string
+  webAuthn: {
+    id: Uint8Array
+    publicKeyJwk: JsonWebKey
+  }
 }
 
 export type AuthResponse = {
@@ -157,7 +160,9 @@ export const registPasskey = async ({
   }
 }
 
-export const authPasskey = async ({ id, publicKeyJwk }: AuthRequest): Promise<AuthResponse> => {
+export const authPasskey = async ({ appHost, webAuthn }: AuthRequest): Promise<AuthResponse> => {
+  const textDec = new TextDecoder()
+
   const challenge = crypto.getRandomValues(new Uint8Array(32))
   console.debug('challenge:', base64url(Buffer.from(challenge)))
 
@@ -168,11 +173,33 @@ export const authPasskey = async ({ id, publicKeyJwk }: AuthRequest): Promise<Au
         {
           transports: ['internal'],
           type: 'public-key',
-          id,
+          id: webAuthn.id,
         },
       ],
     },
   })) as PublicKeyCredential
+
+  // レスポンスを解析
+  const authAttRes = credential.response as AuthenticatorAttestationResponse
+  const clientDataJSON: {
+    challenge: string
+    crossOrigin: boolean
+    origin: string
+    type: string
+  } = JSON.parse(textDec.decode(authAttRes.clientDataJSON))
+  console.debug('clientDataJSON:', clientDataJSON)
+
+  // challengeの比較
+  if (clientDataJSON.challenge !== base64url(Buffer.from(challenge))) {
+    throw new Error('Invalid challenge')
+  }
+
+  // origin(domain)の比較
+  const originHost = new URL(clientDataJSON.origin).hostname
+  console.debug('originHost:', originHost)
+  if (originHost !== appHost) {
+    throw new Error('Invalid origin')
+  }
 
   const { userHandle } = credential.response as AuthenticatorAssertionResponse
   if (!userHandle) {

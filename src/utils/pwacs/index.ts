@@ -1,18 +1,15 @@
 import { AesGcm } from './aes'
 import { cbor } from './cbor'
-import { RegistRequest, authPasskey, registPasskey } from './selfPasskey'
+import { AuthRequest, RegistRequest, authPasskey, registPasskey } from './selfPasskey'
 
 export type PwacsConfig = {
   cryptVerify: Uint8Array
-  webAuthn: {
-    id: Uint8Array
-    publicKeyJwk: JsonWebKey
-  }
+  authReq: AuthRequest
 }
 
 const VERIFY_STRING = 'PWACS Verify'
 
-export class PwaCryptoStorage {
+export class PwaCryptStorage {
   private key: CryptoKey
 
   constructor(key: CryptoKey) {
@@ -20,29 +17,32 @@ export class PwaCryptoStorage {
   }
 
   static async setup(info: RegistRequest) {
+    // Passkeyセットアップ
     const { crypt, webAuthn } = await registPasskey(info)
+
+    // 複合チェック用暗号化文字列生成
     const keys = await AesGcm.deriveKey(crypt.key, crypt.salt)
     const cryptVerify = await AesGcm.encryptString(keys.cryptoKey, VERIFY_STRING)
-    console.debug('setup:', cryptVerify, webAuthn)
 
-    const keys2 = await AesGcm.deriveKey(crypt.key, crypt.salt)
-    console.debug(keys2)
-    const res = await AesGcm.decryptString(keys2.cryptoKey, cryptVerify)
-    console.debug(res)
-
+    // CBORエンコード
     return cbor.encode<PwacsConfig>({
       cryptVerify,
-      webAuthn,
+      authReq: { appHost: info.appHost, webAuthn },
     })
   }
 
   static async unlock(configData: Uint8Array) {
+    // CBORデコード
     const config = cbor.decode<PwacsConfig>(configData)
-    console.debug('unlock:', config)
-    const crypt = await authPasskey(config.webAuthn)
+
+    // Passkey認証
+    const crypt = await authPasskey(config.authReq)
+
+    // 複合チェック
     const keys = await AesGcm.deriveKey(crypt.key, crypt.salt)
-    console.debug(keys)
-    const res = await AesGcm.decryptString(keys.cryptoKey, config.cryptVerify)
-    console.debug(res)
+    const dec = await AesGcm.decryptString(keys.cryptoKey, config.cryptVerify)
+    if (dec !== VERIFY_STRING) {
+      throw new Error('Invalid decrypted')
+    }
   }
 }

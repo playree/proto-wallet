@@ -2,12 +2,12 @@
 
 import { ExButton } from '@/components/nextekit/ui/button'
 import { idxDb } from '@/utils/indexedDB'
-import { PwaCryptoStorage } from '@/utils/pwacs'
+import { PwaCryptStorage } from '@/utils/pwacs'
 import { FC } from 'react'
 
 export const RegisterClient: FC = () => {
   const register = async () => {
-    const res = await PwaCryptoStorage.setup({
+    const res = await PwaCryptStorage.setup({
       appName: 'ProtoWallet',
       appHost: 'localhost',
       userName: 'test@user.dev',
@@ -25,7 +25,7 @@ export const AuthClient: FC = () => {
   const auth = async () => {
     const pwacsConfig = await idxDb.getPwacsConfig()
     if (pwacsConfig) {
-      await PwaCryptoStorage.unlock(pwacsConfig)
+      await PwaCryptStorage.unlock(pwacsConfig)
     }
     // const dec = new TextDecoder()
     // const enc = new TextEncoder()
