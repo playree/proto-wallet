@@ -1,17 +1,17 @@
 import Dexie, { Table } from 'dexie'
 
 export type IdxDbKey = 'pwacs_config'
-export type IdxDbKeyCrypto = ''
+export type IdxDbKeyCrypt = 'test'
 
 export type KeyValue =
   | {
-      key: IdxDbKey | IdxDbKeyCrypto
-      isCrypto: false
+      key: IdxDbKey | IdxDbKeyCrypt
+      isCrypt: false
       value: string | number | Uint8Array
     }
   | {
-      key: IdxDbKey | IdxDbKeyCrypto
-      isCrypto: true
+      key: IdxDbKey | IdxDbKeyCrypt
+      isCrypt: true
       value: Uint8Array
     }
 
@@ -28,7 +28,7 @@ export class IdxDb extends Dexie {
   async setPwacsConfig(config: Uint8Array) {
     return this.keyValue.put({
       key: 'pwacs_config',
-      isCrypto: false,
+      isCrypt: false,
       value: config,
     })
   }
