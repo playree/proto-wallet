@@ -68,23 +68,17 @@ const coseToJwk = (cose: Uint8Array): JsonWebKey => {
 
 const importKey = async (publicKeyJwk: JsonWebKey) => {
   let alg: AlgorithmIdentifier | RsaHashedImportParams | EcKeyImportParams
-  let verifyAlg: AlgorithmIdentifier | RsaPssParams | EcdsaParams
   switch (publicKeyJwk.kty) {
     case 'EC':
       alg = { name: 'ECDSA', namedCurve: 'P-256' }
-      verifyAlg = { name: 'ECDSA', hash: { name: 'SHA-256' } }
       break
     case 'RSA':
       alg = { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } }
-      verifyAlg = { name: 'RSASSA-PKCS1-v1_5' }
       break
     default:
       throw new Error('algorithm not supported')
   }
-
-  const publicKey = await crypto.subtle.importKey('jwk', publicKeyJwk, alg, false, ['verify'])
-  console.debug('publicKey:', publicKey)
-  return { publicKey, verifyAlg }
+  return crypto.subtle.importKey('jwk', publicKeyJwk, alg, false, ['verify'])
 }
 
 const asn1ToP1363 = (asn1: ArrayBuffer) => {
@@ -107,6 +101,27 @@ const asn1ToP1363 = (asn1: ArrayBuffer) => {
   }
 
   return Buffer.concat([new Uint8Array(c1buff, c1offset), new Uint8Array(c2buff, c2offset)])
+}
+
+const verify = async (key: CryptoKey, signature: ArrayBuffer, data: BufferSource) => {
+  let alg: AlgorithmIdentifier | RsaPssParams | EcdsaParams
+  let sig = signature
+  const sigView = new Uint8Array(sig)
+  switch (key.algorithm.name) {
+    case 'ECDSA':
+      alg = { name: 'ECDSA', hash: { name: 'SHA-256' } }
+      if (sigView[0] === 0x30) {
+        sig = asn1ToP1363(signature)
+      }
+      break
+    case 'RSASSA-PKCS1-v1_5':
+      alg = { name: 'RSASSA-PKCS1-v1_5' }
+      break
+    default:
+      throw new Error('algorithm not supported')
+  }
+
+  return crypto.subtle.verify(alg, key, sig, data)
 }
 
 export const registPasskey = async ({
@@ -257,7 +272,7 @@ export const authPasskey = async ({ appHost, webAuthn }: AuthRequest): Promise<A
   const key = await importKey(webAuthn.publicKeyJwk)
   console.debug('key:', key)
 
-  const ok = await crypto.subtle.verify(key.verifyAlg, key.publicKey, asn1ToP1363(authAttRes.signature), verifyData)
+  const ok = await verify(key, authAttRes.signature, verifyData)
   console.debug('ok:', ok)
 
   // userHandleから暗号鍵情報抽出
