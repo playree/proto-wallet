@@ -11,11 +11,16 @@ export type PwacsConfig = {
   authReq: AuthRequest
 }
 
+export type SaveCallback = (key: string, value: Uint8Array) => Promise<void>
+export type LoadCallback = (key: string) => Promise<Uint8Array | undefined>
+
 const VERIFY_STRING = 'PWACS Verify'
 
 export class PwaCryptStorage {
   private configData: Uint8Array
   private key: CryptoKey
+  private saveCB?: SaveCallback
+  private loadCB?: LoadCallback
 
   constructor(configData: Uint8Array, key: CryptoKey) {
     this.configData = configData
@@ -40,6 +45,41 @@ export class PwaCryptStorage {
 
   async decryptString(data: ArrayBuffer) {
     return AesGcm.decryptString(this.key, data)
+  }
+
+  setCallback({ saveCB, loadCB }: { saveCB?: SaveCallback; loadCB?: LoadCallback }) {
+    this.saveCB = saveCB
+    this.loadCB = loadCB
+  }
+
+  async save(key: string, data: Uint8Array) {
+    if (!this.saveCB) {
+      throw new Error('saveCB is not set')
+    }
+    await this.saveCB(key, await AesGcm.encrypt(this.key, data))
+  }
+
+  async saveString(key: string, data: string) {
+    if (!this.saveCB) {
+      throw new Error('saveCB is not set')
+    }
+    await this.saveCB(key, await AesGcm.encryptString(this.key, data))
+  }
+
+  async load(key: string) {
+    if (!this.loadCB) {
+      throw new Error('loadCB is not set')
+    }
+    const data = await this.loadCB(key)
+    return data ? AesGcm.decrypt(this.key, data) : undefined
+  }
+
+  async loadString(key: string) {
+    if (!this.loadCB) {
+      throw new Error('loadCB is not set')
+    }
+    const data = await this.loadCB(key)
+    return data ? AesGcm.decryptString(this.key, data) : undefined
   }
 
   static async setup(info: RegistRequest) {

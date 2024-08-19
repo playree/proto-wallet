@@ -110,7 +110,7 @@ const verify = async (key: CryptoKey, signature: ArrayBuffer, data: BufferSource
   switch (key.algorithm.name) {
     case 'ECDSA':
       alg = { name: 'ECDSA', hash: { name: 'SHA-256' } }
-      if (sigView[0] === 0x30) {
+      if (sigView[0] === 0x30 && sigView[2] === 0x02) {
         sig = asn1ToP1363(signature)
       }
       break

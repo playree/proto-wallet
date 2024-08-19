@@ -37,6 +37,23 @@ export const AuthClient: FC = () => {
         const teststr = await pwacs.decryptString(data.value as Uint8Array)
         console.debug('test:', teststr)
       }
+
+      pwacs.setCallback({
+        saveCB: async (key, value) => {
+          await idxDb.keyValue.put({
+            key,
+            isCrypt: true,
+            value,
+          })
+        },
+        loadCB: async (key) => {
+          const data = await idxDb.keyValue.get(key)
+          return data ? (data.value as Uint8Array) : undefined
+        },
+      })
+      await pwacs.saveString('cb', 'CB test')
+      const cbres = await pwacs.loadString('cb')
+      console.debug('cbres', cbres)
     }
   }
 

@@ -1,7 +1,7 @@
 import Dexie, { Table } from 'dexie'
 
 export type IdxDbKey = 'pwacs_config'
-export type IdxDbKeyCrypt = 'test'
+export type IdxDbKeyCrypt = 'test' | 'test2'
 
 export type KeyValue =
   | {
@@ -10,7 +10,7 @@ export type KeyValue =
       value: string | number | Uint8Array
     }
   | {
-      key: IdxDbKey | IdxDbKeyCrypt
+      key: IdxDbKey | IdxDbKeyCrypt | string
       isCrypt: true
       value: Uint8Array
     }
