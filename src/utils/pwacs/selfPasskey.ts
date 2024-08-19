@@ -230,13 +230,6 @@ export const authPasskey = async ({ appHost, webAuthn }: AuthRequest): Promise<A
   const credential = (await navigator.credentials.get({
     publicKey: {
       challenge,
-      allowCredentials: [
-        {
-          transports: ['internal'],
-          type: 'public-key',
-          id: webAuthn.id,
-        },
-      ],
     },
   })) as PublicKeyCredential
 
