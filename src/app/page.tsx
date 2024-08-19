@@ -2,7 +2,7 @@ import { gridStyles } from '@/components/styles'
 import { ThemeSwitchList } from '@/components/theme-switch'
 import { FC } from 'react'
 
-import { AuthClient, RegisterClient } from './client'
+import { AuthClient, AuthPassClient, RegisterClient, RegisterPassClient } from './client'
 
 const Home: FC = () => {
   return (
@@ -18,6 +18,12 @@ const Home: FC = () => {
         </div>
         <div className='col-span-12'>
           <AuthClient />
+        </div>
+        <div className='col-span-12'>
+          <RegisterPassClient />
+        </div>
+        <div className='col-span-12'>
+          <AuthPassClient />
         </div>
       </div>
     </main>

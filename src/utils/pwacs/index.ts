@@ -8,7 +8,7 @@ export type PwacsConfig = {
   symbol: 'PwacsConfig'
   version: number
   cryptVerify: Uint8Array
-  authReq: AuthRequest
+  authReq?: AuthRequest
 }
 
 export type SaveCallback = (key: string, value: Uint8Array) => Promise<void>
@@ -102,18 +102,63 @@ export class PwaCryptStorage {
     )
   }
 
+  static async setupFromPassword(password: string) {
+    // パスワードからハッシュ生成
+    const hashPassword = await crypto.subtle.digest('SHA-512', Buffer.from(password))
+
+    // 複合チェック用暗号化文字列生成
+    const keys = await AesGcm.deriveKey(
+      new Uint8Array(hashPassword.slice(0, 32)),
+      new Uint8Array(hashPassword.slice(32)),
+    )
+    const cryptVerify = await AesGcm.encryptString(keys.cryptoKey, VERIFY_STRING)
+
+    // CBORエンコード
+    return new PwaCryptStorage(
+      cbor.encode<PwacsConfig>({
+        symbol: 'PwacsConfig',
+        version: PWACS_CONFIG_VER,
+        cryptVerify,
+      }),
+      keys.cryptoKey,
+    )
+  }
+
   static async unlock(configData: Uint8Array) {
     // CBORデコード
     const config = cbor.decode<PwacsConfig>(configData)
 
     // Passkey認証
+    if (!config.authReq) {
+      throw new Error('Passkey not available')
+    }
     const crypt = await authPasskey(config.authReq)
 
     // 複合チェック
     const keys = await AesGcm.deriveKey(crypt.key, crypt.salt)
     const dec = await AesGcm.decryptString(keys.cryptoKey, config.cryptVerify)
     if (dec !== VERIFY_STRING) {
-      throw new Error('Invalid decrypted')
+      throw new Error('Unable to unlock')
+    }
+
+    return new PwaCryptStorage(configData, keys.cryptoKey)
+  }
+
+  static async unlockFromPassword(configData: Uint8Array, password: string) {
+    // CBORデコード
+    const config = cbor.decode<PwacsConfig>(configData)
+
+    // パスワードからハッシュ生成
+    const hashPassword = await crypto.subtle.digest('SHA-512', Buffer.from(password))
+
+    // 複合チェック
+    const keys = await AesGcm.deriveKey(
+      new Uint8Array(hashPassword.slice(0, 32)),
+      new Uint8Array(hashPassword.slice(32)),
+    )
+    const dec = await AesGcm.decryptString(keys.cryptoKey, config.cryptVerify)
+    if (dec !== VERIFY_STRING) {
+      throw new Error('Unable to unlock')
     }
 
     return new PwaCryptStorage(configData, keys.cryptoKey)
