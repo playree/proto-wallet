@@ -4,8 +4,8 @@ import { AuthRequest, RegistRequest, authPasskey, registPasskey } from './selfPa
 
 export const PWACS_CONFIG_VER = 1
 
-export type PwacsConfig = {
-  symbol: 'PwacsConfig'
+export type PwacsData = {
+  symbol: 'Pwacs'
   version: number
   cryptVerify: Uint8Array
   authReq?: AuthRequest
@@ -14,6 +14,12 @@ export type PwacsConfig = {
 export type SaveCallback = (key: string, value: Uint8Array) => Promise<void>
 export type LoadCallback = (key: string) => Promise<Uint8Array | undefined>
 
+type Config = {
+  saveCB?: SaveCallback
+  loadCB?: LoadCallback
+  enableCache?: boolean
+}
+
 const VERIFY_STRING = 'PWACS Verify'
 
 export class PwaCryptStorage {
@@ -21,10 +27,16 @@ export class PwaCryptStorage {
   private key: CryptoKey
   private saveCB?: SaveCallback
   private loadCB?: LoadCallback
+  private cache: Record<string, unknown>
+  private isEnabledCache: boolean
 
-  constructor(configData: Uint8Array, key: CryptoKey) {
+  constructor(configData: Uint8Array, key: CryptoKey, config?: Config) {
     this.configData = configData
     this.key = key
+    this.saveCB = config?.saveCB
+    this.loadCB = config?.loadCB
+    this.cache = {}
+    this.isEnabledCache = !!config?.enableCache
   }
 
   exportConfigData() {
@@ -45,11 +57,6 @@ export class PwaCryptStorage {
 
   async decryptString(data: ArrayBuffer) {
     return AesGcm.decryptString(this.key, data)
-  }
-
-  setCallback({ saveCB, loadCB }: { saveCB?: SaveCallback; loadCB?: LoadCallback }) {
-    this.saveCB = saveCB
-    this.loadCB = loadCB
   }
 
   async save(key: string, data: Uint8Array) {
@@ -82,7 +89,7 @@ export class PwaCryptStorage {
     return data ? AesGcm.decryptString(this.key, data) : undefined
   }
 
-  static async setup(info: RegistRequest) {
+  static async setup(info: RegistRequest, config?: Config) {
     // Passkeyセットアップ
     const { crypt, webAuthn } = await registPasskey(info)
 
@@ -92,17 +99,18 @@ export class PwaCryptStorage {
 
     // CBORエンコード
     return new PwaCryptStorage(
-      cbor.encode<PwacsConfig>({
-        symbol: 'PwacsConfig',
+      cbor.encode<PwacsData>({
+        symbol: 'Pwacs',
         version: PWACS_CONFIG_VER,
         cryptVerify,
         authReq: { appHost: info.appHost, webAuthn },
       }),
       keys.cryptoKey,
+      config,
     )
   }
 
-  static async setupFromPassword(password: string) {
+  static async setupFromPassword(password: string, config?: Config) {
     // パスワードからハッシュ生成
     const hashPassword = await crypto.subtle.digest('SHA-512', Buffer.from(password))
 
@@ -115,38 +123,39 @@ export class PwaCryptStorage {
 
     // CBORエンコード
     return new PwaCryptStorage(
-      cbor.encode<PwacsConfig>({
-        symbol: 'PwacsConfig',
+      cbor.encode<PwacsData>({
+        symbol: 'Pwacs',
         version: PWACS_CONFIG_VER,
         cryptVerify,
       }),
       keys.cryptoKey,
+      config,
     )
   }
 
-  static async unlock(configData: Uint8Array) {
+  static async unlock(configData: Uint8Array, config?: Config) {
     // CBORデコード
-    const config = cbor.decode<PwacsConfig>(configData)
+    const data = cbor.decode<PwacsData>(configData)
 
     // Passkey認証
-    if (!config.authReq) {
+    if (!data.authReq) {
       throw new Error('Passkey not available')
     }
-    const crypt = await authPasskey(config.authReq)
+    const crypt = await authPasskey(data.authReq)
 
     // 複合チェック
     const keys = await AesGcm.deriveKey(crypt.key, crypt.salt)
-    const dec = await AesGcm.decryptString(keys.cryptoKey, config.cryptVerify)
+    const dec = await AesGcm.decryptString(keys.cryptoKey, data.cryptVerify)
     if (dec !== VERIFY_STRING) {
       throw new Error('Unable to unlock')
     }
 
-    return new PwaCryptStorage(configData, keys.cryptoKey)
+    return new PwaCryptStorage(configData, keys.cryptoKey, config)
   }
 
-  static async unlockFromPassword(configData: Uint8Array, password: string) {
+  static async unlockFromPassword(configData: Uint8Array, password: string, config?: Config) {
     // CBORデコード
-    const config = cbor.decode<PwacsConfig>(configData)
+    const data = cbor.decode<PwacsData>(configData)
 
     // パスワードからハッシュ生成
     const hashPassword = await crypto.subtle.digest('SHA-512', Buffer.from(password))
@@ -156,11 +165,11 @@ export class PwaCryptStorage {
       new Uint8Array(hashPassword.slice(0, 32)),
       new Uint8Array(hashPassword.slice(32)),
     )
-    const dec = await AesGcm.decryptString(keys.cryptoKey, config.cryptVerify)
+    const dec = await AesGcm.decryptString(keys.cryptoKey, data.cryptVerify)
     if (dec !== VERIFY_STRING) {
       throw new Error('Unable to unlock')
     }
 
-    return new PwaCryptStorage(configData, keys.cryptoKey)
+    return new PwaCryptStorage(configData, keys.cryptoKey, config)
   }
 }

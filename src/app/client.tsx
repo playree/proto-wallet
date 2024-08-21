@@ -31,14 +31,7 @@ export const AuthClient: FC = () => {
   const auth = async () => {
     const pwacsConfig = await idxDb.getPwacsConfig()
     if (pwacsConfig) {
-      const pwacs = await PwaCryptStorage.unlock(pwacsConfig)
-      const data = await idxDb.keyValue.get('test')
-      if (data) {
-        const teststr = await pwacs.decryptString(data.value as Uint8Array)
-        console.debug('test:', teststr)
-      }
-
-      pwacs.setCallback({
+      const pwacs = await PwaCryptStorage.unlock(pwacsConfig, {
         saveCB: async (key, value) => {
           await idxDb.keyValue.put({
             key,
@@ -51,6 +44,12 @@ export const AuthClient: FC = () => {
           return data ? (data.value as Uint8Array) : undefined
         },
       })
+      const data = await idxDb.keyValue.get('test')
+      if (data) {
+        const teststr = await pwacs.decryptString(data.value as Uint8Array)
+        console.debug('test:', teststr)
+      }
+
       await pwacs.saveString('cb', 'CB test')
       const cbres = await pwacs.loadString('cb')
       console.debug('cbres', cbres)
@@ -81,14 +80,7 @@ export const AuthPassClient: FC = () => {
   const auth = async () => {
     const pwacsConfig = await idxDb.getPwacsConfig()
     if (pwacsConfig) {
-      const pwacs = await PwaCryptStorage.unlockFromPassword(pwacsConfig, 'TestPassword1234')
-      const data = await idxDb.keyValue.get('test')
-      if (data) {
-        const teststr = await pwacs.decryptString(data.value as Uint8Array)
-        console.debug('test:', teststr)
-      }
-
-      pwacs.setCallback({
+      const pwacs = await PwaCryptStorage.unlockFromPassword(pwacsConfig, 'TestPassword1234', {
         saveCB: async (key, value) => {
           await idxDb.keyValue.put({
             key,
@@ -101,6 +93,12 @@ export const AuthPassClient: FC = () => {
           return data ? (data.value as Uint8Array) : undefined
         },
       })
+      const data = await idxDb.keyValue.get('test')
+      if (data) {
+        const teststr = await pwacs.decryptString(data.value as Uint8Array)
+        console.debug('test:', teststr)
+      }
+
       await pwacs.saveString('cb', 'CB test')
       const cbres = await pwacs.loadString('cb')
       console.debug('cbres', cbres)
